@@ -384,6 +384,8 @@ var clientHelp = `
     --tls-cert, a path to a PEM encoded certificate matching the provided 
     private key. The certificate must have client authentication 
     enabled (mutual-TLS).
+
+	--server-name, Set TLS SNI server name field
 ` + commonHelp
 
 func client(args []string) {
@@ -399,6 +401,7 @@ func client(args []string) {
 	flags.BoolVar(&config.TLS.SkipVerify, "tls-skip-verify", false, "")
 	flags.StringVar(&config.TLS.Cert, "tls-cert", "", "")
 	flags.StringVar(&config.TLS.Key, "tls-key", "", "")
+	flags.StringVar(&config.TLS.ServerName, "server-name", "", "")
 	flags.Var(&headerFlags{config.Headers}, "header", "")
 	hostname := flags.String("hostname", "", "")
 	pid := flags.Bool("pid", false, "")
