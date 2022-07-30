@@ -50,6 +50,7 @@ func (s *Server) listener(host, port string) (net.Listener, error) {
 			extra = " (WARNING: LetsEncrypt will attempt to connect to your domain on port 443)"
 		}
 	} else if s.config.TLS.RandomKeyCert {
+		s.Infof("Generating random cert")
 		conf, err := GenRandomCert()
 
 		if err != nil {
