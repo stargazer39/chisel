@@ -179,6 +179,7 @@ func server(args []string) {
 	flags.BoolVar(&config.Reverse, "reverse", false, "")
 	flags.StringVar(&config.TLS.Key, "tls-key", "", "")
 	flags.StringVar(&config.TLS.Cert, "tls-cert", "", "")
+	flags.BoolVar(&config.TLS.RandomKeyCert, "random-cert", false, "")
 	flags.Var(multiFlag{&config.TLS.Domains}, "tls-domain", "")
 	flags.StringVar(&config.TLS.CA, "tls-ca", "", "")
 

@@ -1,14 +1,20 @@
 package chserver
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"io/ioutil"
+	"math/big"
 	"net"
 	"os"
 	"os/user"
 	"path/filepath"
+	"time"
 
 	"github.com/jpillora/chisel/share/settings"
 	"golang.org/x/crypto/acme/autocert"
@@ -16,10 +22,11 @@ import (
 
 //TLSConfig enables configures TLS
 type TLSConfig struct {
-	Key     string
-	Cert    string
-	Domains []string
-	CA      string
+	Key           string
+	Cert          string
+	Domains       []string
+	CA            string
+	RandomKeyCert bool
 }
 
 func (s *Server) listener(host, port string) (net.Listener, error) {
@@ -42,6 +49,14 @@ func (s *Server) listener(host, port string) (net.Listener, error) {
 		if port != "443" && hasDomains {
 			extra = " (WARNING: LetsEncrypt will attempt to connect to your domain on port 443)"
 		}
+	} else if s.config.TLS.RandomKeyCert {
+		conf, err := GenRandomCert()
+
+		if err != nil {
+			return nil, err
+		}
+
+		tlsConf = conf
 	}
 	//tcp listen
 	l, err := net.Listen("tcp", host+":"+port)
@@ -148,4 +163,45 @@ func addPEMFile(path string, pool *x509.CertPool) error {
 		return errors.New("Fail to load certificates from : " + path)
 	}
 	return nil
+}
+
+func GenRandomCert() (*tls.Config, error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate a pem block with the private key
+	keyPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	})
+
+	tml := x509.Certificate{
+		// you can add any attr that you need
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().AddDate(5, 0, 0),
+		// you have to generate a different serial number each execution
+		SerialNumber: big.NewInt(123123),
+		Subject: pkix.Name{
+			CommonName:   "New Name",
+			Organization: []string{"New Org."},
+		},
+		BasicConstraintsValid: true,
+	}
+	cert, err := x509.CreateCertificate(rand.Reader, &tml, &tml, &key.PublicKey, key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate a pem block with the certificate
+	certPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	})
+
+	tls_cert, err := tls.X509KeyPair(certPem, keyPem)
+
+	return &tls.Config{Certificates: []tls.Certificate{tls_cert}}, err
 }
